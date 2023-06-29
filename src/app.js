@@ -95,7 +95,16 @@ app.get('/messages', async (req, res) => {
         { to: { $in: ['Todos', user] } }
       ]}
     ).toArray();
+
+    if (limit){
+      const limitSchema = joi.number().min(1);
+      const { error } = limitSchema.validate(limit);
+      if (error) return res.status(422).send(error.message);
+      
+      return res.send(messages.slice(-limit));
+    }
     res.send(messages);
+    
   } catch ({message}){
     res.status(500).send(message);
   }
