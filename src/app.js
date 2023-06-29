@@ -65,15 +65,14 @@ app.post('/messages', async (req, res) => {
   const messageSchema = joi.object({
     to: joi.string().required(),
     text: joi.string().required(),
-    type: joi.valid('message','private_message')
+    type: joi.valid('message','private_message').required()
   });
   const {error} = messageSchema.validate({ to, text, type }, { abortEarly: false });
+  if (error) return res.status(422).send(error.details.map(({message}) => message));
 
   try {
     const participant = await db.collection('participants').findOne({ name: user });
     if (!participant) return res.sendStatus(422);
-    
-    if (error) return res.status(422).send(error.details.map(({message}) => message));
 
     db.collection('messages').insertOne(
       {from: user, to, text, type, time: dayjs(Date.now()).format('HH:mm:ss')}
