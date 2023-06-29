@@ -48,15 +48,17 @@ app.post('/participants', async (req, res) => {
 });
 
 //GET participants
-app.get('/participants', (req, res) => {
-  db.collection('participants').find().toArray()
-    .then(data => res.send(data))
-    .catch(({ message }) => res.status(500).send(message))
-  ;
+app.get('/participants', async (req, res) => {
+  try {
+    const participants = await db.collection('participants').find().toArray();
+    res.send(participants);
+  } catch ({message}) {
+    res.status(500).send(message);
+  }
 });
 
 //POST messages
-app.get('/messages', async (req, res) => {
+app.post('/messages', async (req, res) => {
   const { to, text, type } = req.body;
   const { user } = req.headers;
 
@@ -76,6 +78,24 @@ app.get('/messages', async (req, res) => {
     );
     res.sendStatus(201);
 
+  } catch ({message}){
+    res.status(500).send(message);
+  }
+});
+
+//GET messages
+app.get('/messages', async (req, res) => {
+  const { user } = req.headers;
+  const { limit } = req.query;
+
+  try {
+    const messages = await db.collection('messages').find( 
+      { $or: [
+        { from: user },
+        { to: { $in: ['Todos', user] } }
+      ]}
+    ).toArray();
+    res.send(messages);
   } catch ({message}){
     res.status(500).send(message);
   }
