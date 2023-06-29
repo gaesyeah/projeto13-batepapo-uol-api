@@ -146,7 +146,7 @@ setInterval(async () => {
       for (let i = 0; i < removedParticipants.length; i++){
         await db.collection('messages').insertOne(
           { from: removedParticipants[i].name, 
-            to: 'Todos', text: 'sai da sala...', type: 'status', time: Date.now() 
+            to: 'Todos', text: 'sai da sala...', type: 'status', time: dayjs(Date.now()).format('HH:mm:ss')
           }
         );
       }
