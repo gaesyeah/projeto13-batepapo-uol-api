@@ -19,7 +19,7 @@ const mongoClient = new MongoClient(DATABASE_URL);
 try {
   await mongoClient.connect();
   console.log(`Conectado ao banco ${DATABASE_URL}`);
-} catch ({message}) {
+} catch ({ message }) {
   console.log(message);
 }
 const db = mongoClient.db();
@@ -42,7 +42,7 @@ app.post('/participants', async (req, res) => {
     );
     res.sendStatus(201);
 
-  } catch ({message}) {
+  } catch ({ message }) {
     res.status(500).send(message);
   }
 });
@@ -52,7 +52,7 @@ app.get('/participants', async (req, res) => {
   try {
     const participants = await db.collection('participants').find().toArray();
     res.send(participants);
-  } catch ({message}) {
+  } catch ({ message }) {
     res.status(500).send(message);
   }
 });
@@ -67,7 +67,7 @@ app.post('/messages', async (req, res) => {
     text: joi.string().required(),
     type: joi.valid('message','private_message')
   });
-  const {error} = messageSchema.validate({to, text, type});
+  const {error} = messageSchema.validate({ to, text, type });
 
   try {
     const participant = await db.collection('participants').findOne({ name: user });
@@ -78,7 +78,7 @@ app.post('/messages', async (req, res) => {
     );
     res.sendStatus(201);
 
-  } catch ({message}){
+  } catch ({ message }){
     res.status(500).send(message);
   }
 });
@@ -105,7 +105,7 @@ app.get('/messages', async (req, res) => {
     }
     res.send(messages);
     
-  } catch ({message}){
+  } catch ({ message }){
     res.status(500).send(message);
   }
 });
@@ -118,15 +118,48 @@ app.post('/status', async (req, res) => {
     const participant = await db.collection('participants').findOne({ name: user });
     if (!user || !participant) return res.sendStatus(404);
 
-    await db.collection('participants').updateOne(
+    const {modifiedCount} = await db.collection('participants').updateOne(
       { name: user },
       { $set : { lastStatus: Date.now() } }
     );
-    res.sendStatus(200);
+    if (modifiedCount === 1) {
+      res.sendStatus(200);
+    } else {
+      res.sendStatus(500);
+    }
 
-  } catch ({message}){
+  } catch ({ message }){
     res.status(500).send(message);
   }
-})
+});
+
+//remoção de participantes inativos
+setInterval(async () => {
+  const timeLimit = Date.now() - 10000;//10000 milisegundos, ou seja, 10 segundos
+  try {
+    const removedParticipants = await db.collection('participants').find(
+      { lastStatus : {$lt : timeLimit} }//menor ou igual que 10 segundos atrás
+    ).toArray();
+
+    if (removedParticipants.length > 0) {
+
+      for (let i = 0; i < removedParticipants.length; i++){
+        await db.collection('messages').insertOne(
+          { from: removedParticipants[i].name, 
+            to: 'Todos', text: 'sai da sala...', type: 'status', time: Date.now() 
+          }
+        );
+      }
+
+      await db.collection('participants').deleteMany(
+        { lastStatus : {$lt : timeLimit} }
+      );
+  
+      console.log('Verificado a cada 15s: Os participantes',removedParticipants.map(({ name }) => name), 'foram removidos por inatividade(10s)');
+    }
+  } catch ({message}) {
+    console.log(message)
+  }
+},15000);
 
 app.listen(PORT, () => console.log(`Rodando em http://localhost:${PORT}`));
