@@ -59,7 +59,7 @@ app.get('/participants', async (req, res) => {
 
 //POST messages
 app.post('/messages', async (req, res) => {
-  const message = req.body;
+  const { to, text, type } = req.body;
   const { user } = req.headers;
 
   const messageSchema = joi.object({
@@ -67,7 +67,7 @@ app.post('/messages', async (req, res) => {
     text: joi.string().required(),
     type: joi.valid('message','private_message').required()
   });
-  const {error} = messageSchema.validate(message, { abortEarly: false });
+  const {error} = messageSchema.validate({ to, text, type }, { abortEarly: false });
   if (error) return res.status(422).send(error.details.map(({message}) => message));
 
   try {
@@ -75,7 +75,7 @@ app.post('/messages', async (req, res) => {
     if (!participant) return res.sendStatus(422);
 
     db.collection('messages').insertOne(
-      {...message,from: user, time: dayjs(Date.now()).format('HH:mm:ss')}
+      {from: user, to, text, type, time: dayjs(Date.now()).format('HH:mm:ss')}
     );
     res.sendStatus(201);
 
