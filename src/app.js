@@ -110,4 +110,23 @@ app.get('/messages', async (req, res) => {
   }
 });
 
+//POST status
+app.post('/status', async (req, res) => {
+  const {user} = req.headers;
+
+  try {
+    const participant = await db.collection('participants').findOne({ name: user });
+    if (!user || !participant) return res.sendStatus(404);
+
+    await db.collection('participants').updateOne(
+      { name: user },
+      { $set : { lastStatus: Date.now() } }
+    );
+    res.sendStatus(200);
+
+  } catch ({message}){
+    res.status(500).send(message);
+  }
+})
+
 app.listen(PORT, () => console.log(`Rodando em http://localhost:${PORT}`));
