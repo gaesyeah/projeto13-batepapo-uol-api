@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import dotenv from 'dotenv';
 import express from 'express';
 import joi from 'joi';
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 
 //configuração do servidor
 const app = express();
@@ -132,6 +132,25 @@ app.post('/status', async (req, res) => {
   } catch ({ message }){
     res.status(500).send(message);
   }
+});
+
+//DELETE messsages
+app.delete('/messages/:id', async (req, res) => {
+  const { user } = req.headers;
+  const { id } = req.params;
+
+  const auth = await db.collection('messages').findOne(
+    { $and: [
+      { _id : new ObjectId(id) },
+      { from: user}
+    ]}
+  );
+  if (!auth) return res.sendStatus(401);
+
+  const { deletedCount } = await db.collection('messages').deleteOne({ _id: new ObjectId(id)});
+  if (deletedCount === 0) return res.sendStatus(404);
+
+  res.sendStatus(204);
 });
 
 //remoção de participantes inativos
