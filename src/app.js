@@ -28,8 +28,8 @@ const db = mongoClient.db();
 app.post('/participants', async (req, res) => {
   const { name } = req.body;
 
-  const schema = joi.string().required();
-  const { error } = schema.validate(name);
+  const schema = joi.object({ name: joi.string().required()});
+  const { error } = schema.validate(req.body);
   if (error) return res.status(422).send(error.message);
 
   try {
@@ -67,7 +67,7 @@ app.post('/messages', async (req, res) => {
     text: joi.string().required(),
     type: joi.valid('message','private_message').required()
   });
-  const {error} = messageSchema.validate({ to, text, type }, { abortEarly: false });
+  const {error} = messageSchema.validate(req.body, { abortEarly: false });
   if (error) return res.status(422).send(error.details.map(({message}) => message));
 
   try {
