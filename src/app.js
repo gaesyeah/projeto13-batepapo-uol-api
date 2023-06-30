@@ -119,15 +119,13 @@ app.post('/status', async (req, res) => {
     const participant = await db.collection('participants').findOne({ name: user });
     if (!user || !participant) return res.sendStatus(404);
 
-    const {modifiedCount} = await db.collection('participants').updateOne(
+    const { matchedCount } = await db.collection('participants').updateOne(
       { name: user },
       { $set : { lastStatus: Date.now() } }
     );
-    if (modifiedCount === 1) {
-      res.sendStatus(200);
-    } else {
-      res.sendStatus(500);
-    }
+    if (matchedCount === 0) return res.sendStatus(404);
+
+    res.sendStatus(200);
 
   } catch ({ message }){
     res.status(500).send(message);
@@ -139,16 +137,59 @@ app.delete('/messages/:id', async (req, res) => {
   const { user } = req.headers;
   const { id } = req.params;
 
-  const auth = await db.collection('messages').findOne(
-    { $and: [
-      { _id : new ObjectId(id) },
-      { from: user}
-    ]}
-  );
-  if (!auth) return res.sendStatus(401);
+  try {
+    const auth = await db.collection('messages').findOne(
+      { $and: [
+        { _id : new ObjectId(id) },
+        { from: user}
+      ]}
+    );
+    if (!auth) return res.sendStatus(401);
+  
+    const { deletedCount } = await db.collection('messages').deleteOne({ _id: new ObjectId(id)});
+    if (deletedCount === 0) return res.sendStatus(404);
+  
+    res.sendStatus(200);
+  } catch ({ message }){
+    res.status(500).send(message);
+  }
+});
 
-  const { deletedCount } = await db.collection('messages').deleteOne({ _id: new ObjectId(id)});
-  if (deletedCount === 0) return res.sendStatus(404);
+//PUT messages
+app.put('/messages/:id', async (req, res) => {
+  const { to, text, type } = req.body;
+  const { user } = req.headers;
+  const { id } = req.params;
+
+  const messageSchema = joi.object({
+    to: joi.string().required(),
+    text: joi.string().required(),
+    type: joi.valid('message','private_message').required()
+  });
+  const {error} = messageSchema.validate(req.body, { abortEarly: false });
+  if (error) return res.status(422).send(error.details.map(({message}) => message));
+
+  try {
+    const auth = await db.collection('messages').findOne(
+      { $and: [
+        { _id : new ObjectId(id) },
+        { from: user}
+      ]}
+    );
+    if (!auth) return res.sendStatus(401);
+
+    const { matchedCount } = await db.collection('messages').updateOne(
+      { from: user },
+      { $set : { to, text, type } }
+    );
+    if (matchedCount === 0) return res.sendStatus(404);
+
+    res.sendStatus(200);
+
+  } catch ({ message }) {
+    res.status(500).send(message);
+  }
+
 });
 
 //remoção de participantes inativos
