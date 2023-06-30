@@ -179,7 +179,7 @@ app.put('/messages/:id', async (req, res) => {
     if (!auth) return res.sendStatus(401);
 
     const { matchedCount } = await db.collection('messages').updateOne(
-      { from: user },
+      { _id : new ObjectId(id) },
       { $set : { to, text, type } }
     );
     if (matchedCount === 0) return res.sendStatus(404);
