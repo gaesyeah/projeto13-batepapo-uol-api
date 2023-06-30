@@ -149,8 +149,6 @@ app.delete('/messages/:id', async (req, res) => {
 
   const { deletedCount } = await db.collection('messages').deleteOne({ _id: new ObjectId(id)});
   if (deletedCount === 0) return res.sendStatus(404);
-
-  res.sendStatus(204);
 });
 
 //remoção de participantes inativos
